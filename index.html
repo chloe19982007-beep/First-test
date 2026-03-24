@@ -419,7 +419,13 @@ body.dark #courseModal input {
     let dragStartKey = null;
     let dragEndKey = null;
     let dragPreviewKeys = [];
-    function getDragRangeKeys(startKey, endKey) {
+  function startDrag(key) {
+  isDragging = true;
+  dragStartKey = key;
+  dragEndKey = key;
+  updateDragPreview();
+}
+  function getDragRangeKeys(startKey, endKey) {
   if (!startKey || !endKey) return [];
 
   const [day1, p1] = startKey.split("-");
@@ -792,11 +798,12 @@ if (dragPreviewKeys.includes(key)) {
   td.classList.add("drag-preview");
 }
 
-  td.onmousedown = () => {
-  isDragging = true;
-  dragStartKey = key;
-  dragEndKey = key;
-  updateDragPreview();
+td.onmousedown = () => {
+  startDrag(key);
+};
+
+td.ontouchstart = () => {
+  startDrag(key);
 };
 
 td.onmouseenter = () => {
