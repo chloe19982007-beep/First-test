@@ -294,11 +294,25 @@
         grid-template-columns: 1fr;
       }
     }
+    .modal-box {
+  background: white;
+}
+
+body.dark .modal-box {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+body.dark #courseModal input {
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #475569;
+}
   </style>
 </head>
 <body>
   <div id="courseModal" onclick="clickModalBackground(event)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-  <div style="background:white; width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+  <div class="modal-box" style="width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
     <h3 style="margin-top:0; margin-bottom:12px;">編輯課程</h3>
     <div id="modalSlotInfo" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
 
