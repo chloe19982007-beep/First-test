@@ -307,6 +307,13 @@
       <input id="modalCourseRoom" type="text" placeholder="教室" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
       <input id="modalCourseTeacher" type="text" placeholder="老師" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
       <input id="modalCourseColor" type="text" placeholder="顏色，例如 #bfdbfe" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+      <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
+        <div onclick="pickColor('#fbcfe8')" style="width:28px; height:28px; border-radius:999px; background:#fbcfe8; border:2px solid #ddd; cursor:pointer;"></div>
+        <div onclick="pickColor('#bfdbfe')" style="width:28px; height:28px; border-radius:999px; background:#bfdbfe; border:2px solid #ddd; cursor:pointer;"></div>
+        <div onclick="pickColor('#bbf7d0')" style="width:28px; height:28px; border-radius:999px; background:#bbf7d0; border:2px solid #ddd; cursor:pointer;"></div>
+        <div onclick="pickColor('#fde68a')" style="width:28px; height:28px; border-radius:999px; background:#fde68a; border:2px solid #ddd; cursor:pointer;"></div>
+        <div onclick="pickColor('#ddd6fe')" style="width:28px; height:28px; border-radius:999px; background:#ddd6fe; border:2px solid #ddd; cursor:pointer;"></div>
+      </div>
     </div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
@@ -349,7 +356,7 @@
       </table>
     </div>
 
-    <div class="editor">
+    <div class="editor" style="display:none;">
       <h2>課程編輯面板</h2>
       <div class="selected-info" id="selectedInfo">請先點一個課表格子</div>
 
@@ -388,6 +395,9 @@
   </div>
 
   <script>
+    function pickColor(color) {
+  document.getElementById("modalCourseColor").value = color;
+}
     function openModal(key) {
   selectedKey = key;
 
