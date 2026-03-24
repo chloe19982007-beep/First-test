@@ -419,6 +419,7 @@ body.dark #courseModal input {
     let dragStartKey = null;
     let dragEndKey = null;
     let dragPreviewKeys = [];
+    let dragFillKeys = [];
   function startDrag(key) {
   isDragging = true;
   dragStartKey = key;
@@ -461,25 +462,13 @@ function updateDragPreview() {
   const end = Math.max(Number(p1), Number(p2));
 
   // 先讓你輸入一次資料
-  const name = prompt("課名？");
-  if (!name) return;
+  dragFillKeys = [];
 
-  const room = prompt("教室？") || "";
-  const teacher = prompt("老師？") || "";
-  const color = getAutoColor(name);
+for (let i = start; i <= end; i++) {
+  dragFillKeys.push(`${day1}-${i}`);
+}
 
-  for (let i = start; i <= end; i++) {
-    const key = `${day1}-${i}`;
-    scheduleData[key] = {
-      name,
-      room,
-      teacher,
-      color
-    };
-  }
-
-  saveCurrentSemesterData();
-  initSchedule();
+openModal(startKey);
 }
     function getCourseSpan(day, startPeriod) {
   const current = scheduleData[`${day}-${startPeriod}`];
@@ -536,6 +525,7 @@ function updateDragPreview() {
 
 function closeModal() {
   document.getElementById("courseModal").style.display = "none";
+  dragFillKeys = [];
 }
 
 function saveCourseFromModal() {
@@ -552,22 +542,40 @@ function saveCourseFromModal() {
     return;
   }
 
+  if (dragFillKeys.length > 0) {
+  dragFillKeys.forEach(key => {
+    scheduleData[key] = {
+      name,
+      room,
+      teacher,
+      color
+    };
+  });
+} else {
   scheduleData[selectedKey] = {
     name,
     room,
     teacher,
     color
   };
+}
 
-  saveCurrentSemesterData();
-  closeModal();
-  initSchedule();
+saveCurrentSemesterData();
+dragFillKeys = [];
+closeModal();
+initSchedule();
 }
 
 function deleteCourseFromModal() {
   if (!selectedKey) return;
 
-  delete scheduleData[selectedKey];
+  if (dragFillKeys.length > 0) {
+   dragFillKeys.forEach(key => {
+    delete scheduleData[key];
+   });
+} else {
+   delete scheduleData[selectedKey];
+}
   saveCurrentSemesterData();
   closeModal();
   initSchedule();
@@ -913,7 +921,13 @@ td.onmouseup = () => {
         return;
       }
 
-      delete scheduleData[selectedKey];
+      if (dragFillKeys.length > 0) {
+  dragFillKeys.forEach(key => {
+    delete scheduleData[key];
+  });
+} else {
+  delete scheduleData[selectedKey];
+}
       saveCurrentSemesterData();
       clearEditor();
       initSchedule();
