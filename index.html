@@ -38,7 +38,8 @@
       margin-bottom: 24px;
     }
 
-    .controls {
+    .controls,
+    .semester-controls {
       display: flex;
       justify-content: center;
       gap: 12px;
@@ -46,7 +47,8 @@
       flex-wrap: wrap;
     }
 
-    button {
+    button,
+    select {
       border: none;
       background: #3b82f6;
       color: white;
@@ -56,7 +58,14 @@
       cursor: pointer;
     }
 
-    button:hover {
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      text-align: center;
+    }
+
+    button:hover,
+    select:hover {
       background: #2563eb;
     }
 
@@ -74,6 +83,21 @@
 
     .secondary-btn:hover {
       background: #475569;
+    }
+
+    .semester-bar {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .semester-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
     }
 
     .table-wrap {
@@ -205,7 +229,8 @@
     }
 
     body.dark .table-wrap,
-    body.dark .editor {
+    body.dark .editor,
+    body.dark .semester-bar {
       background: #111827;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
@@ -229,7 +254,8 @@
     body.dark .hint,
     body.dark .selected-info,
     body.dark .field label,
-    body.dark .course-info {
+    body.dark .course-info,
+    body.dark .semester-title {
       color: #cbd5e1;
     }
 
@@ -274,6 +300,15 @@
   <div class="container">
     <h1>我的課表</h1>
     <div class="subtitle">NCCU Semester Timetable</div>
+
+    <div class="semester-bar">
+      <div class="semester-title">目前學期管理</div>
+      <div class="semester-controls">
+        <select id="semesterSelect" onchange="changeSemester(this.value)"></select>
+        <button onclick="addSemester()">新增學期</button>
+        <button class="delete-btn" onclick="deleteSemester()">刪除目前學期</button>
+      </div>
+    </div>
 
     <div class="controls">
       <button onclick="fillSampleData()">載入範例課表</button>
@@ -329,7 +364,7 @@
     </div>
 
     <div class="hint">
-      點格子後在下方編輯，資料會自動儲存到瀏覽器。
+      點格子後在下方編輯；不同學期會各自保存不同課表。
     </div>
   </div>
 
@@ -358,8 +393,95 @@
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
     let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
-    let scheduleData = JSON.parse(localStorage.getItem("scheduleData")) || {};
+
+    let semesterList = JSON.parse(localStorage.getItem("semesterList")) || ["113-1"];
+    let currentSemester = localStorage.getItem("currentSemester") || "113-1";
+
+    if (!semesterList.includes(currentSemester)) {
+      semesterList.push(currentSemester);
+    }
+
+    let scheduleData = JSON.parse(localStorage.getItem(`scheduleData_${currentSemester}`)) || {};
     let selectedKey = null;
+
+    function saveSemesterList() {
+      localStorage.setItem("semesterList", JSON.stringify(semesterList));
+      localStorage.setItem("currentSemester", currentSemester);
+    }
+
+    function loadCurrentSemesterData() {
+      scheduleData = JSON.parse(localStorage.getItem(`scheduleData_${currentSemester}`)) || {};
+    }
+
+    function saveCurrentSemesterData() {
+      localStorage.setItem(`scheduleData_${currentSemester}`, JSON.stringify(scheduleData));
+    }
+
+    function renderSemesterSelect() {
+      const select = document.getElementById("semesterSelect");
+      select.innerHTML = "";
+
+      semesterList.forEach(semester => {
+        const option = document.createElement("option");
+        option.value = semester;
+        option.textContent = semester;
+        if (semester === currentSemester) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    }
+
+    function changeSemester(semester) {
+      currentSemester = semester;
+      saveSemesterList();
+      loadCurrentSemesterData();
+      clearEditor();
+      initSchedule();
+    }
+
+    function addSemester() {
+      const newSemester = prompt("請輸入新學期名稱，例如：113-2");
+      if (!newSemester) return;
+
+      const trimmed = newSemester.trim();
+      if (!trimmed) return;
+
+      if (semesterList.includes(trimmed)) {
+        alert("這個學期已經存在");
+        return;
+      }
+
+      semesterList.push(trimmed);
+      currentSemester = trimmed;
+      scheduleData = {};
+
+      saveSemesterList();
+      saveCurrentSemesterData();
+      renderSemesterSelect();
+      clearEditor();
+      initSchedule();
+    }
+
+    function deleteSemester() {
+      if (semesterList.length === 1) {
+        alert("至少要保留一個學期");
+        return;
+      }
+
+      const confirmDelete = confirm(`確定要刪除學期 ${currentSemester} 嗎？`);
+      if (!confirmDelete) return;
+
+      localStorage.removeItem(`scheduleData_${currentSemester}`);
+      semesterList = semesterList.filter(s => s !== currentSemester);
+      currentSemester = semesterList[0];
+
+      saveSemesterList();
+      loadCurrentSemesterData();
+      renderSemesterSelect();
+      clearEditor();
+      initSchedule();
+    }
 
     function getVisibleDays() {
       return showWeekend ? allDays : allDays.slice(0, 5);
@@ -438,6 +560,7 @@
 
     function initSchedule() {
       const visibleDays = getVisibleDays();
+      renderSemesterSelect();
       renderTableHead(visibleDays);
 
       const tbody = document.getElementById("scheduleBody");
@@ -493,7 +616,7 @@
       const [day, period] = key.split("-");
 
       document.getElementById("selectedInfo").textContent =
-        `目前編輯：${dayLabels[day]} 第${period}節`;
+        `目前編輯：${currentSemester}｜${dayLabels[day]} 第${period}節`;
 
       document.getElementById("courseName").value = data.name || "";
       document.getElementById("courseRoom").value = data.room || "";
@@ -525,7 +648,7 @@
         color
       };
 
-      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      saveCurrentSemesterData();
       initSchedule();
     }
 
@@ -536,7 +659,7 @@
       }
 
       delete scheduleData[selectedKey];
-      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      saveCurrentSemesterData();
       clearEditor();
       initSchedule();
     }
@@ -566,13 +689,13 @@
         "sun-4": { name: "自主讀書", room: "圖書館", teacher: "自己", color: "#c7d2fe" }
       };
 
-      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      saveCurrentSemesterData();
       initSchedule();
     }
 
     function clearSchedule() {
       scheduleData = {};
-      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      saveCurrentSemesterData();
       clearEditor();
       initSchedule();
     }
@@ -582,14 +705,25 @@
 
       html2canvas(target).then(canvas => {
         const link = document.createElement("a");
-        link.download = "我的課表.png";
+        link.download = `${currentSemester}_我的課表.png`;
         link.href = canvas.toDataURL();
         link.click();
       });
     }
 
     function downloadJSON() {
-      const dataStr = JSON.stringify(scheduleData, null, 2);
+      const backupData = {
+        semesterList,
+        currentSemester,
+        schedules: {}
+      };
+
+      semesterList.forEach(semester => {
+        backupData.schedules[semester] =
+          JSON.parse(localStorage.getItem(`scheduleData_${semester}`)) || {};
+      });
+
+      const dataStr = JSON.stringify(backupData, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
 
@@ -610,8 +744,25 @@
       reader.onload = function(e) {
         try {
           const importedData = JSON.parse(e.target.result);
-          scheduleData = importedData;
-          localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+
+          if (importedData.semesterList && importedData.schedules) {
+            semesterList = importedData.semesterList;
+            currentSemester = importedData.currentSemester || semesterList[0];
+
+            semesterList.forEach(semester => {
+              localStorage.setItem(
+                `scheduleData_${semester}`,
+                JSON.stringify(importedData.schedules[semester] || {})
+              );
+            });
+
+            saveSemesterList();
+            loadCurrentSemesterData();
+          } else {
+            scheduleData = importedData;
+            saveCurrentSemesterData();
+          }
+
           clearEditor();
           initSchedule();
           alert("匯入成功");
@@ -624,6 +775,8 @@
     }
 
     applyDarkMode();
+    saveSemesterList();
+    loadCurrentSemesterData();
     initSchedule();
   </script>
 </body>
