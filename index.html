@@ -409,6 +409,34 @@ body.dark #courseModal input {
   </div>
 
   <script>
+    function getCourseSpan(day, startPeriod) {
+  const current = scheduleData[`${day}-${startPeriod}`];
+  if (!current) return 1;
+
+  let span = 1;
+  let nextPeriod = startPeriod + 1;
+
+  while (nextPeriod <= periods.length) {
+    const next = scheduleData[`${day}-${nextPeriod}`];
+    if (isSameCourse(current, next)) {
+      span++;
+      nextPeriod++;
+    } else {
+      break;
+    }
+  }
+
+  return span;
+}
+    function isSameCourse(a, b) {
+  if (!a || !b) return false;
+
+  return (
+    a.name === b.name &&
+    a.room === b.room &&
+    a.teacher === b.teacher
+  );
+}
     function clickModalBackground(event) {
   if (event.target.id === "courseModal") {
     closeModal();
@@ -669,6 +697,8 @@ function deleteCourseFromModal() {
       const tbody = document.getElementById("scheduleBody");
       tbody.innerHTML = "";
 
+      const skippedCells = {};
+
       periods.forEach((period, rowIndex) => {
         const tr = document.createElement("tr");
 
@@ -678,36 +708,53 @@ function deleteCourseFromModal() {
         tr.appendChild(timeTd);
 
         visibleDays.forEach(day => {
-          const td = document.createElement("td");
-          td.className = "course-cell";
+  const periodNumber = rowIndex + 1;
+  const key = `${day}-${periodNumber}`;
 
-          const key = `${day}-${rowIndex + 1}`;
+  if (skippedCells[key]) {
+    return;
+  }
 
-          if (selectedKey === key) {
-            td.classList.add("selected");
-          }
+  const td = document.createElement("td");
+  td.className = "course-cell";
 
-          td.onclick = () => {
-            openModal(key);
-            initSchedule();
-        };
+  if (selectedKey === key) {
+    td.classList.add("selected");
+  }
 
-          if (scheduleData[key]) {
-            td.style.background = scheduleData[key].color || "#bfdbfe";
-            td.innerHTML = `
-              <div class="course-name">${scheduleData[key].name}</div>
-              <div class="course-info">
-                ${scheduleData[key].room || ""}<br>
-                ${scheduleData[key].teacher || ""}
-              </div>
-            `;
-          } else {
-            td.style.background = "";
-            td.innerHTML = `<div class="empty">－</div>`;
-          }
+  td.onclick = () => {
+    openModal(key);
+    initSchedule();
+  };
 
-          tr.appendChild(td);
-        });
+  const currentCourse = scheduleData[key];
+
+  if (currentCourse) {
+    const span = getCourseSpan(day, periodNumber);
+
+    if (span > 1) {
+      td.rowSpan = span;
+
+      for (let i = 1; i < span; i++) {
+        skippedCells[`${day}-${periodNumber + i}`] = true;
+      }
+    }
+
+    td.style.background = currentCourse.color || "#bfdbfe";
+    td.innerHTML = `
+      <div class="course-name">${currentCourse.name}</div>
+      <div class="course-info">
+        ${currentCourse.room || ""}<br>
+        ${currentCourse.teacher || ""}
+      </div>
+    `;
+  } else {
+    td.style.background = "";
+    td.innerHTML = `<div class="empty">－</div>`;
+  }
+
+  tr.appendChild(td);
+});
 
         tbody.appendChild(tr);
       });
