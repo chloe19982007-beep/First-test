@@ -297,6 +297,25 @@
   </style>
 </head>
 <body>
+  <div id="courseModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:white; width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+    <h3 style="margin-top:0; margin-bottom:12px;">編輯課程</h3>
+    <div id="modalSlotInfo" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input id="modalCourseName" type="text" placeholder="課名" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+      <input id="modalCourseRoom" type="text" placeholder="教室" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+      <input id="modalCourseTeacher" type="text" placeholder="老師" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+      <input id="modalCourseColor" type="text" placeholder="顏色，例如 #bfdbfe" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+      <button onclick="saveCourseFromModal()">儲存</button>
+      <button onclick="deleteCourseFromModal()" style="background:#ef4444;">刪除</button>
+      <button onclick="closeModal()" style="background:#64748b;">取消</button>
+    </div>
+  </div>
+</div>
   <div class="container">
     <h1>我的課表</h1>
     <div class="subtitle">NCCU Semester Timetable</div>
@@ -369,6 +388,61 @@
   </div>
 
   <script>
+    function openModal(key) {
+  selectedKey = key;
+
+  const data = scheduleData[key] || {};
+  const [day, period] = key.split("-");
+
+  document.getElementById("modalSlotInfo").textContent =
+    `${currentSemester}｜${dayLabels[day]} 第${period}節`;
+
+  document.getElementById("modalCourseName").value = data.name || "";
+  document.getElementById("modalCourseRoom").value = data.room || "";
+  document.getElementById("modalCourseTeacher").value = data.teacher || "";
+  document.getElementById("modalCourseColor").value = data.color || getAutoColor(data.name || "");
+
+  document.getElementById("courseModal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("courseModal").style.display = "none";
+}
+
+function saveCourseFromModal() {
+  if (!selectedKey) return;
+
+  const name = document.getElementById("modalCourseName").value.trim();
+  const room = document.getElementById("modalCourseRoom").value.trim();
+  const teacher = document.getElementById("modalCourseTeacher").value.trim();
+  const inputColor = document.getElementById("modalCourseColor").value.trim();
+  const color = inputColor || getAutoColor(name);
+
+  if (!name) {
+    alert("請先輸入課名");
+    return;
+  }
+
+  scheduleData[selectedKey] = {
+    name,
+    room,
+    teacher,
+    color
+  };
+
+  saveCurrentSemesterData();
+  closeModal();
+  initSchedule();
+}
+
+function deleteCourseFromModal() {
+  if (!selectedKey) return;
+
+  delete scheduleData[selectedKey];
+  saveCurrentSemesterData();
+  closeModal();
+  initSchedule();
+}
     const periods = [
       { label: "第1節", time: "08:10–09:00" },
       { label: "第2節", time: "09:10–10:00" },
@@ -585,10 +659,9 @@
           }
 
           td.onclick = () => {
-            selectedKey = key;
-            loadEditor(key);
+            openModal(key);
             initSchedule();
-          };
+        };
 
           if (scheduleData[key]) {
             td.style.background = scheduleData[key].color || "#bfdbfe";
