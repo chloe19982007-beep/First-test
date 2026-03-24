@@ -9,12 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
-    .course-cell.drag-preview {
-  box-shadow: inset 0 0 0 9999px rgba(59, 130, 246, 0.18);
-    }
-    body.dark .course-cell.drag-preview {
-      box-shadow: inset 0 0 0 9999px rgba(96, 165, 250, 0.22);
-    }
     * {
       box-sizing: border-box;
     }
@@ -145,6 +139,9 @@
       transition: 0.2s;
       cursor: pointer;
       min-width: 120px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
 
     .course-cell:hover {
@@ -172,61 +169,15 @@
       font-size: 14px;
     }
 
-    .editor {
-      margin-top: 24px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      padding: 20px;
-    }
-
-    .editor h2 {
-      margin-top: 0;
-      font-size: 22px;
-    }
-
-    .selected-info {
-      margin-bottom: 16px;
-      color: #444;
-      font-size: 15px;
-    }
-
-    .editor-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .field label {
-      font-size: 14px;
-      color: #555;
-    }
-
-    .field input {
-      padding: 10px 12px;
-      border: 1px solid #cfd8ea;
-      border-radius: 10px;
-      font-size: 15px;
-    }
-
-    .editor-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 18px;
-      flex-wrap: wrap;
-    }
-
     .hint {
       margin-top: 18px;
       color: #666;
       font-size: 14px;
       text-align: center;
+    }
+
+    .modal-box {
+      background: white;
     }
 
     body.dark {
@@ -235,7 +186,6 @@
     }
 
     body.dark .table-wrap,
-    body.dark .editor,
     body.dark .semester-bar {
       background: #111827;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -258,21 +208,13 @@
 
     body.dark .subtitle,
     body.dark .hint,
-    body.dark .selected-info,
-    body.dark .field label,
-    body.dark .course-info,
-    body.dark .semester-title {
+    body.dark .semester-title,
+    body.dark .course-info {
       color: #cbd5e1;
     }
 
     body.dark .empty {
       color: #64748b;
-    }
-
-    body.dark .field input {
-      background: #0f172a;
-      color: #f8fafc;
-      border-color: #475569;
     }
 
     body.dark .course-cell {
@@ -287,6 +229,17 @@
       outline: 3px solid #60a5fa;
     }
 
+    body.dark .modal-box {
+      background: #111827;
+      color: #e5e7eb;
+    }
+
+    body.dark #courseModal input {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #475569;
+    }
+
     @media (max-width: 768px) {
       h1 {
         font-size: 26px;
@@ -295,54 +248,10 @@
       .course-cell {
         height: 80px;
       }
-
-      .editor-grid {
-        grid-template-columns: 1fr;
-      }
     }
-    .modal-box {
-  background: white;
-}
-
-body.dark .modal-box {
-  background: #111827;
-  color: #e5e7eb;
-}
-
-body.dark #courseModal input {
-  background: #0f172a;
-  color: #f8fafc;
-  border: 1px solid #475569;
-}
   </style>
 </head>
 <body>
-  <div id="courseModal" onclick="clickModalBackground(event)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-  <div class="modal-box" style="width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-    <h3 style="margin-top:0; margin-bottom:12px;">編輯課程</h3>
-    <div id="modalSlotInfo" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
-
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <input id="modalCourseName" type="text" placeholder="課名" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
-      <input id="modalCourseRoom" type="text" placeholder="教室" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
-      <input id="modalCourseTeacher" type="text" placeholder="老師" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
-      <input id="modalCourseColor" type="text" placeholder="顏色，例如 #bfdbfe" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
-      <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
-        <div onclick="pickColor('#fbcfe8')" style="width:28px; height:28px; border-radius:999px; background:#fbcfe8; border:2px solid #ddd; cursor:pointer;"></div>
-        <div onclick="pickColor('#bfdbfe')" style="width:28px; height:28px; border-radius:999px; background:#bfdbfe; border:2px solid #ddd; cursor:pointer;"></div>
-        <div onclick="pickColor('#bbf7d0')" style="width:28px; height:28px; border-radius:999px; background:#bbf7d0; border:2px solid #ddd; cursor:pointer;"></div>
-        <div onclick="pickColor('#fde68a')" style="width:28px; height:28px; border-radius:999px; background:#fde68a; border:2px solid #ddd; cursor:pointer;"></div>
-        <div onclick="pickColor('#ddd6fe')" style="width:28px; height:28px; border-radius:999px; background:#ddd6fe; border:2px solid #ddd; cursor:pointer;"></div>
-      </div>
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
-      <button onclick="saveCourseFromModal()">儲存</button>
-      <button onclick="deleteCourseFromModal()" style="background:#ef4444;">刪除</button>
-      <button onclick="closeModal()" style="background:#64748b;">取消</button>
-    </div>
-  </div>
-</div>
   <div class="container">
     <h1>我的課表</h1>
     <div class="subtitle">NCCU Semester Timetable</div>
@@ -376,210 +285,40 @@ body.dark #courseModal input {
       </table>
     </div>
 
-    <div class="editor" style="display:none;">
-      <h2>課程編輯面板</h2>
-      <div class="selected-info" id="selectedInfo">請先點一個課表格子</div>
-
-      <div class="editor-grid">
-        <div class="field">
-          <label for="courseName">課名</label>
-          <input id="courseName" type="text" placeholder="例如：民法概要">
-        </div>
-
-        <div class="field">
-          <label for="courseRoom">教室</label>
-          <input id="courseRoom" type="text" placeholder="例如：綜院 270113">
-        </div>
-
-        <div class="field">
-          <label for="courseTeacher">老師</label>
-          <input id="courseTeacher" type="text" placeholder="例如：陳老師">
-        </div>
-
-        <div class="field">
-          <label for="courseColor">顏色</label>
-          <input id="courseColor" type="text" placeholder="例如：#bfdbfe">
-        </div>
-      </div>
-
-      <div class="editor-actions">
-        <button onclick="saveCourse()">儲存課程</button>
-        <button class="delete-btn" onclick="deleteCourse()">刪除此格</button>
-        <button class="secondary-btn" onclick="clearEditor()">清空輸入欄</button>
-      </div>
-    </div>
-
     <div class="hint">
-      點格子後在下方編輯；不同學期會各自保存不同課表。
+      點格子後會跳出編輯視窗；不同學期會各自保存不同課表。
+    </div>
+  </div>
+
+  <div id="courseModal" onclick="clickModalBackground(event)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div class="modal-box" style="width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <h3 style="margin-top:0; margin-bottom:12px;">編輯課程</h3>
+      <div id="modalSlotInfo" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input id="modalCourseName" type="text" placeholder="課名" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+        <input id="modalCourseRoom" type="text" placeholder="教室" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+        <input id="modalCourseTeacher" type="text" placeholder="老師" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+        <input id="modalCourseColor" type="text" placeholder="顏色，例如 #bfdbfe" style="padding:10px 12px; border:1px solid #cfd8ea; border-radius:10px; font-size:15px;">
+
+        <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
+          <div onclick="pickColor('#fbcfe8')" style="width:28px; height:28px; border-radius:999px; background:#fbcfe8; border:2px solid #ddd; cursor:pointer;"></div>
+          <div onclick="pickColor('#bfdbfe')" style="width:28px; height:28px; border-radius:999px; background:#bfdbfe; border:2px solid #ddd; cursor:pointer;"></div>
+          <div onclick="pickColor('#bbf7d0')" style="width:28px; height:28px; border-radius:999px; background:#bbf7d0; border:2px solid #ddd; cursor:pointer;"></div>
+          <div onclick="pickColor('#fde68a')" style="width:28px; height:28px; border-radius:999px; background:#fde68a; border:2px solid #ddd; cursor:pointer;"></div>
+          <div onclick="pickColor('#ddd6fe')" style="width:28px; height:28px; border-radius:999px; background:#ddd6fe; border:2px solid #ddd; cursor:pointer;"></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+        <button onclick="saveCourseFromModal()">儲存</button>
+        <button onclick="deleteCourseFromModal()" style="background:#ef4444;">刪除</button>
+        <button onclick="closeModal()" style="background:#64748b;">取消</button>
+      </div>
     </div>
   </div>
 
   <script>
-    let isDragging = false;
-    let dragStartKey = null;
-    let dragEndKey = null;
-    let dragPreviewKeys = [];
-    let dragFillKeys = [];
-  function startDrag(key) {
-  isDragging = true;
-  dragStartKey = key;
-  dragEndKey = key;
-  updateDragPreview();
-}
-  function getDragRangeKeys(startKey, endKey) {
-  if (!startKey || !endKey) return [];
-
-  const [day1, p1] = startKey.split("-");
-  const [day2, p2] = endKey.split("-");
-
-  if (day1 !== day2) return [];
-
-  const start = Math.min(Number(p1), Number(p2));
-  const end = Math.max(Number(p1), Number(p2));
-
-  const keys = [];
-  for (let i = start; i <= end; i++) {
-    keys.push(`${day1}-${i}`);
-  }
-  return keys;
-}
-
-function updateDragPreview() {
-  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragEndKey);
-  initSchedule();
-}
-    function fillRange(startKey, endKey) {
-  const [day1, p1] = startKey.split("-");
-  const [day2, p2] = endKey.split("-");
-
-  // 只允許同一天拖曳（先簡化）
-  if (day1 !== day2) {
-    alert("目前只支援同一天拖曳");
-    return;
-  }
-
-  const start = Math.min(Number(p1), Number(p2));
-  const end = Math.max(Number(p1), Number(p2));
-
-  // 先讓你輸入一次資料
-  dragFillKeys = [];
-
-for (let i = start; i <= end; i++) {
-  dragFillKeys.push(`${day1}-${i}`);
-}
-
-openModal(startKey);
-}
-    function getCourseSpan(day, startPeriod) {
-  const current = scheduleData[`${day}-${startPeriod}`];
-  if (!current) return 1;
-
-  let span = 1;
-  let nextPeriod = startPeriod + 1;
-
-  while (nextPeriod <= periods.length) {
-    const next = scheduleData[`${day}-${nextPeriod}`];
-    if (isSameCourse(current, next)) {
-      span++;
-      nextPeriod++;
-    } else {
-      break;
-    }
-  }
-
-  return span;
-}
-    function isSameCourse(a, b) {
-  if (!a || !b) return false;
-
-  return (
-    a.name === b.name &&
-    a.room === b.room &&
-    a.teacher === b.teacher
-  );
-}
-    function clickModalBackground(event) {
-  if (event.target.id === "courseModal") {
-    closeModal();
-  }
-}
-    function pickColor(color) {
-  document.getElementById("modalCourseColor").value = color;
-}
-    function openModal(key) {
-  selectedKey = key;
-
-  const data = scheduleData[key] || {};
-  const [day, period] = key.split("-");
-
-  document.getElementById("modalSlotInfo").textContent =
-    `${currentSemester}｜${dayLabels[day]} 第${period}節`;
-
-  document.getElementById("modalCourseName").value = data.name || "";
-  document.getElementById("modalCourseRoom").value = data.room || "";
-  document.getElementById("modalCourseTeacher").value = data.teacher || "";
-  document.getElementById("modalCourseColor").value = data.color || getAutoColor(data.name || "");
-
-  document.getElementById("courseModal").style.display = "flex";
-}
-
-function closeModal() {
-  document.getElementById("courseModal").style.display = "none";
-  dragFillKeys = [];
-}
-
-function saveCourseFromModal() {
-  if (!selectedKey) return;
-
-  const name = document.getElementById("modalCourseName").value.trim();
-  const room = document.getElementById("modalCourseRoom").value.trim();
-  const teacher = document.getElementById("modalCourseTeacher").value.trim();
-  const inputColor = document.getElementById("modalCourseColor").value.trim();
-  const color = inputColor || getAutoColor(name);
-
-  if (!name) {
-    alert("請先輸入課名");
-    return;
-  }
-
-  if (dragFillKeys.length > 0) {
-  dragFillKeys.forEach(key => {
-    scheduleData[key] = {
-      name,
-      room,
-      teacher,
-      color
-    };
-  });
-} else {
-  scheduleData[selectedKey] = {
-    name,
-    room,
-    teacher,
-    color
-  };
-}
-
-saveCurrentSemesterData();
-dragFillKeys = [];
-closeModal();
-initSchedule();
-}
-
-function deleteCourseFromModal() {
-  if (!selectedKey) return;
-
-  if (dragFillKeys.length > 0) {
-   dragFillKeys.forEach(key => {
-    delete scheduleData[key];
-   });
-} else {
-   delete scheduleData[selectedKey];
-}
-  saveCurrentSemesterData();
-  closeModal();
-  initSchedule();
-}
     const periods = [
       { label: "第1節", time: "08:10–09:00" },
       { label: "第2節", time: "09:10–10:00" },
@@ -636,9 +375,7 @@ function deleteCourseFromModal() {
         const option = document.createElement("option");
         option.value = semester;
         option.textContent = semester;
-        if (semester === currentSemester) {
-          option.selected = true;
-        }
+        if (semester === currentSemester) option.selected = true;
         select.appendChild(option);
       });
     }
@@ -647,7 +384,7 @@ function deleteCourseFromModal() {
       currentSemester = semester;
       saveSemesterList();
       loadCurrentSemesterData();
-      clearEditor();
+      closeModal();
       initSchedule();
     }
 
@@ -670,7 +407,7 @@ function deleteCourseFromModal() {
       saveSemesterList();
       saveCurrentSemesterData();
       renderSemesterSelect();
-      clearEditor();
+      closeModal();
       initSchedule();
     }
 
@@ -690,7 +427,7 @@ function deleteCourseFromModal() {
       saveSemesterList();
       loadCurrentSemesterData();
       renderSemesterSelect();
-      clearEditor();
+      closeModal();
       initSchedule();
     }
 
@@ -707,35 +444,19 @@ function deleteCourseFromModal() {
     function getAutoColor(courseName) {
       if (!courseName) return "#bfdbfe";
 
-      if (
-        courseName.includes("民法") ||
-        courseName.includes("法律") ||
-        courseName.includes("刑法")
-      ) {
+      if (courseName.includes("民法") || courseName.includes("法律") || courseName.includes("刑法")) {
         return "#fecdd3";
       }
 
-      if (
-        courseName.includes("哲學") ||
-        courseName.includes("倫理") ||
-        courseName.includes("邏輯")
-      ) {
+      if (courseName.includes("哲學") || courseName.includes("倫理") || courseName.includes("邏輯")) {
         return "#ddd6fe";
       }
 
-      if (
-        courseName.includes("會計") ||
-        courseName.includes("經濟") ||
-        courseName.includes("統計")
-      ) {
+      if (courseName.includes("會計") || courseName.includes("經濟") || courseName.includes("統計")) {
         return "#fde68a";
       }
 
-      if (
-        courseName.includes("大腦") ||
-        courseName.includes("心理") ||
-        courseName.includes("科學")
-      ) {
+      if (courseName.includes("大腦") || courseName.includes("心理") || courseName.includes("科學")) {
         return "#bbf7d0";
       }
 
@@ -769,6 +490,36 @@ function deleteCourseFromModal() {
       });
     }
 
+    function isSameCourse(a, b) {
+      if (!a || !b) return false;
+
+      return (
+        a.name === b.name &&
+        a.room === b.room &&
+        a.teacher === b.teacher
+      );
+    }
+
+    function getCourseSpan(day, startPeriod) {
+      const current = scheduleData[`${day}-${startPeriod}`];
+      if (!current) return 1;
+
+      let span = 1;
+      let nextPeriod = startPeriod + 1;
+
+      while (nextPeriod <= periods.length) {
+        const next = scheduleData[`${day}-${nextPeriod}`];
+        if (isSameCourse(current, next)) {
+          span++;
+          nextPeriod++;
+        } else {
+          break;
+        }
+      }
+
+      return span;
+    }
+
     function initSchedule() {
       const visibleDays = getVisibleDays();
       renderSemesterSelect();
@@ -788,115 +539,100 @@ function deleteCourseFromModal() {
         tr.appendChild(timeTd);
 
         visibleDays.forEach(day => {
-  const periodNumber = rowIndex + 1;
-  const key = `${day}-${periodNumber}`;
+          const periodNumber = rowIndex + 1;
+          const key = `${day}-${periodNumber}`;
 
-  if (skippedCells[key]) {
-    return;
-  }
+          if (skippedCells[key]) return;
 
-  const td = document.createElement("td");
-  td.className = "course-cell";
+          const td = document.createElement("td");
+          td.className = "course-cell";
 
-if (selectedKey === key) {
-  td.classList.add("selected");
-}
+          if (selectedKey === key) {
+            td.classList.add("selected");
+          }
 
-if (dragPreviewKeys.includes(key)) {
-  td.classList.add("drag-preview");
-}
+          td.onclick = () => {
+            openModal(key);
+          };
 
-td.onmousedown = () => {
-  startDrag(key);
-};
+          td.ontouchend = (event) => {
+            event.preventDefault();
+            openModal(key);
+          };
 
-td.ontouchstart = () => {
-  startDrag(key);
-};
+          const currentCourse = scheduleData[key];
 
-td.onmouseenter = () => {
-  if (isDragging) {
-    dragEndKey = key;
-    updateDragPreview();
-  }
-};
+          if (currentCourse) {
+            const span = getCourseSpan(day, periodNumber);
 
-td.onmouseup = () => {
-  if (!isDragging) return;
+            if (span > 1) {
+              td.rowSpan = span;
+              for (let i = 1; i < span; i++) {
+                skippedCells[`${day}-${periodNumber + i}`] = true;
+              }
+            }
 
-  isDragging = false;
+            td.style.background = currentCourse.color || "#bfdbfe";
+            td.innerHTML = `
+              <div class="course-name">${currentCourse.name}</div>
+              <div class="course-info">
+                ${currentCourse.room || ""}<br>
+                ${currentCourse.teacher || ""}
+              </div>
+            `;
+          } else {
+            td.style.background = "";
+            td.innerHTML = `<div class="empty">－</div>`;
+          }
 
-  // 如果只是點一下
-  if (!dragEndKey || dragStartKey === dragEndKey) {
-    dragPreviewKeys = [];
-    openModal(key);
-    initSchedule();
-    return;
-  }
-
-  fillRange(dragStartKey, dragEndKey);
-  dragStartKey = null;
-  dragEndKey = null;
-  dragPreviewKeys = [];
-  initSchedule();
-};
-
-  const currentCourse = scheduleData[key];
-
-  if (currentCourse) {
-    const span = getCourseSpan(day, periodNumber);
-
-    if (span > 1) {
-      td.rowSpan = span;
-
-      for (let i = 1; i < span; i++) {
-        skippedCells[`${day}-${periodNumber + i}`] = true;
-      }
-    }
-
-    td.style.background = currentCourse.color || "#bfdbfe";
-    td.innerHTML = `
-      <div class="course-name">${currentCourse.name}</div>
-      <div class="course-info">
-        ${currentCourse.room || ""}<br>
-        ${currentCourse.teacher || ""}
-      </div>
-    `;
-  } else {
-    td.style.background = "";
-    td.innerHTML = `<div class="empty">－</div>`;
-  }
-
-  tr.appendChild(td);
-});
+          tr.appendChild(td);
+        });
 
         tbody.appendChild(tr);
       });
     }
 
-    function loadEditor(key) {
+    function openModal(key) {
+      selectedKey = key;
+
       const data = scheduleData[key] || {};
       const [day, period] = key.split("-");
 
-      document.getElementById("selectedInfo").textContent =
-        `目前編輯：${currentSemester}｜${dayLabels[day]} 第${period}節`;
+      document.getElementById("modalSlotInfo").textContent =
+        `${currentSemester}｜${dayLabels[day]} 第${period}節`;
 
-      document.getElementById("courseName").value = data.name || "";
-      document.getElementById("courseRoom").value = data.room || "";
-      document.getElementById("courseTeacher").value = data.teacher || "";
-      document.getElementById("courseColor").value = data.color || getAutoColor(data.name || "");
+      document.getElementById("modalCourseName").value = data.name || "";
+      document.getElementById("modalCourseRoom").value = data.room || "";
+      document.getElementById("modalCourseTeacher").value = data.teacher || "";
+      document.getElementById("modalCourseColor").value = data.color || getAutoColor(data.name || "");
+
+      document.getElementById("courseModal").style.display = "flex";
+      initSchedule();
     }
 
-    function saveCourse() {
-      if (!selectedKey) {
-        alert("請先點一個課表格子");
-        return;
-      }
+    function closeModal() {
+      document.getElementById("courseModal").style.display = "none";
+      selectedKey = null;
+      initSchedule();
+    }
 
-      const name = document.getElementById("courseName").value.trim();
-      const room = document.getElementById("courseRoom").value.trim();
-      const teacher = document.getElementById("courseTeacher").value.trim();
-      const inputColor = document.getElementById("courseColor").value.trim();
+    function clickModalBackground(event) {
+      if (event.target.id === "courseModal") {
+        closeModal();
+      }
+    }
+
+    function pickColor(color) {
+      document.getElementById("modalCourseColor").value = color;
+    }
+
+    function saveCourseFromModal() {
+      if (!selectedKey) return;
+
+      const name = document.getElementById("modalCourseName").value.trim();
+      const room = document.getElementById("modalCourseRoom").value.trim();
+      const teacher = document.getElementById("modalCourseTeacher").value.trim();
+      const inputColor = document.getElementById("modalCourseColor").value.trim();
       const color = inputColor || getAutoColor(name);
 
       if (!name) {
@@ -912,34 +648,16 @@ td.onmouseup = () => {
       };
 
       saveCurrentSemesterData();
+      closeModal();
       initSchedule();
     }
 
-    function deleteCourse() {
-      if (!selectedKey) {
-        alert("請先點一個課表格子");
-        return;
-      }
+    function deleteCourseFromModal() {
+      if (!selectedKey) return;
 
-      if (dragFillKeys.length > 0) {
-  dragFillKeys.forEach(key => {
-    delete scheduleData[key];
-  });
-} else {
-  delete scheduleData[selectedKey];
-}
+      delete scheduleData[selectedKey];
       saveCurrentSemesterData();
-      clearEditor();
-      initSchedule();
-    }
-
-    function clearEditor() {
-      document.getElementById("courseName").value = "";
-      document.getElementById("courseRoom").value = "";
-      document.getElementById("courseTeacher").value = "";
-      document.getElementById("courseColor").value = "#bfdbfe";
-      document.getElementById("selectedInfo").textContent = "請先點一個課表格子";
-      selectedKey = null;
+      closeModal();
       initSchedule();
     }
 
@@ -965,7 +683,7 @@ td.onmouseup = () => {
     function clearSchedule() {
       scheduleData = {};
       saveCurrentSemesterData();
-      clearEditor();
+      closeModal();
       initSchedule();
     }
 
@@ -1032,7 +750,7 @@ td.onmouseup = () => {
             saveCurrentSemesterData();
           }
 
-          clearEditor();
+          closeModal();
           initSchedule();
           alert("匯入成功");
         } catch (error) {
