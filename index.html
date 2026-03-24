@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
-<head>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#3b82f6">
-  <title>我的課表</title>
+<thead>
+  <tr id="tableHeadRow">
+    <th class="time-col">節次</th>
+  </tr>
+</thead>
 
   <style>
     * {
@@ -279,6 +277,7 @@
       <button onclick="clearSchedule()">清空課表</button>
       <button onclick="exportImage()">匯出圖片</button>
       <button onclick="downloadJSON()">下載備份</button>
+      <button onclick="toggleWeekend()">顯示 / 隱藏週末</button>
       <button onclick="document.getElementById('importFile').click()">匯入備份</button>
       <button onclick="toggleDarkMode()">深色模式</button>
       <input id="importFile" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
@@ -351,14 +350,17 @@
     ];
 
     const dayLabels = {
-      mon: "星期一",
-      tue: "星期二",
-      wed: "星期三",
-      thu: "星期四",
-      fri: "星期五"
-    };
+  mon: "星期一",
+  tue: "星期二",
+  wed: "星期三",
+  thu: "星期四",
+  fri: "星期五",
+  sat: "星期六",
+  sun: "星期日"
+};
 
-    const days = ["mon", "tue", "wed", "thu", "fri"];
+    const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
 
     let scheduleData = JSON.parse(localStorage.getItem("scheduleData")) || {};
     let selectedKey = null;
@@ -413,6 +415,14 @@
     }
 
     function initSchedule() {
+      const visibleDays = getVisibleDays();
+
+const headRow = document.getElementById("tableHeadRow");
+headRow.innerHTML = `<th class="time-col">節次</th>`;
+
+visibleDays.forEach(day => {
+  headRow.innerHTML += `<th>${dayLabels[day]}</th>`;
+});
       const tbody = document.getElementById("scheduleBody");
       tbody.innerHTML = "";
 
@@ -424,7 +434,7 @@
         timeTd.innerHTML = `${period.label}<br><span style="font-size:12px; color:#666;">${period.time}</span>`;
         tr.appendChild(timeTd);
 
-        days.forEach((day) => {
+        visibleDays.forEach((day) => {
           const td = document.createElement("td");
           td.className = "course-cell";
 
@@ -571,6 +581,15 @@
 
       URL.revokeObjectURL(url);
     }
+    function getVisibleDays() {
+  return showWeekend ? allDays : allDays.slice(0, 5);
+}
+
+function toggleWeekend() {
+  showWeekend = !showWeekend;
+  localStorage.setItem("showWeekend", JSON.stringify(showWeekend));
+  initSchedule();
+}
 
     function importJSON(event) {
       const file = event.target.files[0];
