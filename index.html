@@ -297,7 +297,7 @@
   </style>
 </head>
 <body>
-  <div id="courseModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+  <div id="courseModal" onclick="clickModalBackground(event)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; padding:20px;">
   <div style="background:white; width:min(92vw, 420px); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
     <h3 style="margin-top:0; margin-bottom:12px;">編輯課程</h3>
     <div id="modalSlotInfo" style="margin-bottom:14px; color:#555; font-size:14px;"></div>
@@ -395,6 +395,11 @@
   </div>
 
   <script>
+    function clickModalBackground(event) {
+  if (event.target.id === "courseModal") {
+    closeModal();
+  }
+}
     function pickColor(color) {
   document.getElementById("modalCourseColor").value = color;
 }
