@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <title>我的課表</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f7fb;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      padding: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      border: 1px solid #d9dfeb;
+      text-align: center;
+      padding: 10px;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #eaf1ff;
+      font-weight: 700;
+    }
+
+    .time-col {
+  background: #f3f6fc;
+  font-weight: 600;
+  width: 120px;
+  line-height: 1.5;
+}
+
+    .course-cell {
+      height: 90px;
+      background: #fcfdff;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+
+    .course-cell:hover {
+      background: #f0f6ff;
+    }
+
+    .course-name {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .course-info {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .empty {
+      color: #bbb;
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      background: #3b82f6;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    .hint {
+      margin-top: 18px;
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .editor {
+      margin-top: 24px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+    }
+
+    .editor h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .field input {
+      padding: 10px 12px;
+      border: 1px solid #cfd8ea;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .delete-btn {
+      background: #ef4444;
+    }
+
+    .delete-btn:hover {
+      background: #dc2626;
+    }
+
+    .secondary-btn {
+      background: #64748b;
+    }
+
+    .secondary-btn:hover {
+      background: #475569;
+    }
+
+    .selected-info {
+      margin-bottom: 16px;
+      color: #444;
+      font-size: 15px;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 26px;
+      }
+
+      .course-cell {
+        height: 80px;
+      }
+
+      .editor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>我的課表</h1>
+    <div class="subtitle">NCCU Semester Timetable</div>
+
+    <div class="controls">
+      <button onclick="fillSampleData()">載入範例課表</button>
+      <button onclick="clearSchedule()">清空課表</button>
+      <button onclick="exportImage()">匯出圖片</button>
+      <button onclick="downloadJSON()">下載備份</button>
+<button onclick="document.getElementById('importFile').click()">匯入備份</button>
+<input id="importFile" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="time-col">節次</th>
+            <th>星期一</th>
+            <th>星期二</th>
+            <th>星期三</th>
+            <th>星期四</th>
+            <th>星期五</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleBody"></tbody>
+      </table>
+    </div>
+
+    <div class="editor">
+      <h2>課程編輯面板</h2>
+      <div class="selected-info" id="selectedInfo">請先點一個課表格子</div>
+
+      <div class="editor-grid">
+        <div class="field">
+          <label for="courseName">課名</label>
+          <input id="courseName" type="text" placeholder="例如：民法概要">
+        </div>
+
+        <div class="field">
+          <label for="courseRoom">教室</label>
+          <input id="courseRoom" type="text" placeholder="例如：綜院 270113">
+        </div>
+
+        <div class="field">
+          <label for="courseTeacher">老師</label>
+          <input id="courseTeacher" type="text" placeholder="例如：陳老師">
+        </div>
+
+        <div class="field">
+          <label for="courseColor">顏色</label>
+          <input id="courseColor" type="text" placeholder="例如：#bfdbfe">
+        </div>
+      </div>
+
+      <div class="editor-actions">
+        <button onclick="saveCourse()">儲存課程</button>
+        <button class="delete-btn" onclick="deleteCourse()">刪除此格</button>
+        <button class="secondary-btn" onclick="clearEditor()">清空輸入欄</button>
+      </div>
+    </div>
+
+    <div class="hint">
+      現在是面板編輯版。點格子後，在下方編輯並儲存。
+    </div>
+  </div>
+
+  <script>
+    const periods = [
+  { label: "第1節", time: "08:10–09:00" },
+  { label: "第2節", time: "09:10–10:00" },
+  { label: "第3節", time: "10:20–11:10" },
+  { label: "第4節", time: "11:20–12:10" },
+  { label: "第5節", time: "13:10–14:00" },
+  { label: "第6節", time: "14:10–15:00" },
+  { label: "第7節", time: "15:10–16:00" },
+  { label: "第8節", time: "16:10–17:00" }
+];
+    const dayLabels = {
+      mon: "星期一",
+      tue: "星期二",
+      wed: "星期三",
+      thu: "星期四",
+      fri: "星期五"
+    };
+    const days = ["mon", "tue", "wed", "thu", "fri"];
+
+    let scheduleData = JSON.parse(localStorage.getItem("scheduleData")) || {};
+    let selectedKey = null;
+
+    function initSchedule() {
+      const tbody = document.getElementById("scheduleBody");
+      tbody.innerHTML = "";
+
+      periods.forEach((period, rowIndex) => {
+        const tr = document.createElement("tr");
+
+        const timeTd = document.createElement("td");
+        timeTd.className = "time-col";
+        timeTd.innerHTML = `${period.label}<br><span style="font-size:12px; color:#666;">${period.time}</span>`;
+        tr.appendChild(timeTd);
+
+        days.forEach((day) => {
+          const td = document.createElement("td");
+          td.className = "course-cell";
+
+          const key = `${day}-${rowIndex + 1}`;
+
+          td.onclick = () => {
+            selectedKey = key;
+            loadEditor(key);
+          };
+
+          if (scheduleData[key]) {
+            td.style.background = scheduleData[key].color || "#dbeafe";
+            td.innerHTML = `
+              <div class="course-name">${scheduleData[key].name}</div>
+              <div class="course-info">
+                ${scheduleData[key].room || ""}<br>
+                ${scheduleData[key].teacher || ""}
+              </div>
+            `;
+          } else {
+            td.style.background = "#fcfdff";
+            td.innerHTML = `<div class="empty">－</div>`;
+          }
+
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function loadEditor(key) {
+      const data = scheduleData[key] || {};
+      const [day, period] = key.split("-");
+
+      document.getElementById("selectedInfo").textContent =
+        `目前編輯：${dayLabels[day]} 第${period}節`;
+
+      document.getElementById("courseName").value = data.name || "";
+      document.getElementById("courseRoom").value = data.room || "";
+      document.getElementById("courseTeacher").value = data.teacher || "";
+      document.getElementById("courseColor").value = data.color || getAutoColor(data.name || "");
+    }
+
+    function saveCourse() {
+      if (!selectedKey) {
+        alert("請先點一個課表格子");
+        return;
+      }
+
+      const name = document.getElementById("courseName").value.trim();
+      const room = document.getElementById("courseRoom").value.trim();
+      const teacher = document.getElementById("courseTeacher").value.trim();
+      const inputColor = document.getElementById("courseColor").value.trim();
+const color = inputColor || getAutoColor(name);
+
+      if (!name) {
+        alert("請先輸入課名");
+        return;
+      }
+
+      scheduleData[selectedKey] = {
+        name,
+        room,
+        teacher,
+        color
+      };
+
+      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      initSchedule();
+    }
+
+    function deleteCourse() {
+      if (!selectedKey) {
+        alert("請先點一個課表格子");
+        return;
+      }
+
+      delete scheduleData[selectedKey];
+      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      initSchedule();
+      clearEditor();
+    }
+
+    function clearEditor() {
+      document.getElementById("courseName").value = "";
+      document.getElementById("courseRoom").value = "";
+      document.getElementById("courseTeacher").value = "";
+      document.getElementById("courseColor").value = "#bfdbfe";
+      document.getElementById("selectedInfo").textContent = "請先點一個課表格子";
+      selectedKey = null;
+    }
+
+    function fillSampleData() {
+      scheduleData = {
+        "mon-1": { name: "中國哲學史", room: "綜院 270113", teacher: "王老師", color: "#ddd6fe" },
+        "mon-2": { name: "中國哲學史", room: "綜院 270113", teacher: "王老師", color: "#ddd6fe" },
+        "tue-3": { name: "倫理學", room: "綜院 270205", teacher: "李老師", color: "#fbcfe8" },
+        "tue-4": { name: "倫理學", room: "綜院 270205", teacher: "李老師", color: "#fbcfe8" },
+        "wed-1": { name: "民法概要", room: "法學院 A棟", teacher: "陳老師", color: "#fecdd3" },
+        "wed-2": { name: "民法概要", room: "法學院 A棟", teacher: "陳老師", color: "#fecdd3" },
+        "thu-5": { name: "大腦與我", room: "綜院 113", teacher: "周老師", color: "#bbf7d0" },
+        "fri-3": { name: "會計學", room: "商院 102", teacher: "林老師", color: "#fde68a" },
+        "fri-4": { name: "會計學", room: "商院 102", teacher: "林老師", color: "#fde68a" }
+      };
+
+      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      initSchedule();
+    }
+
+    function clearSchedule() {
+      scheduleData = {};
+      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      initSchedule();
+      clearEditor();
+    }
+    function exportImage() {
+  const target = document.querySelector(".table-wrap");
+
+  html2canvas(target).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "我的課表.png";
+    link.href = canvas.toDataURL();
+    link.click();
+  });
+}
+function getAutoColor(courseName) {
+  if (!courseName) return "#bfdbfe";
+
+  if (courseName.includes("民法") || courseName.includes("法律") || courseName.includes("刑法")) {
+    return "#fecdd3";
+  }
+
+  if (courseName.includes("哲學") || courseName.includes("倫理") || courseName.includes("邏輯")) {
+    return "#ddd6fe";
+  }
+
+  if (courseName.includes("會計") || courseName.includes("經濟") || courseName.includes("統計")) {
+    return "#fde68a";
+  }
+
+  if (courseName.includes("大腦") || courseName.includes("心理") || courseName.includes("科學")) {
+    return "#bbf7d0";
+  }
+
+  return "#bfdbfe";
+}
+function downloadJSON() {
+  const dataStr = JSON.stringify(scheduleData, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "schedule-backup.json";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+
+      scheduleData = importedData;
+      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+      initSchedule();
+      clearEditor();
+
+      alert("匯入成功");
+    } catch (error) {
+      alert("JSON 格式錯誤，匯入失敗");
+    }
+  };
+
+  reader.readAsText(file);
+}
+    
+
+    initSchedule();
+  </script>
+</body>
+</html>
