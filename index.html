@@ -9,6 +9,12 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
+    .course-cell.drag-preview {
+  box-shadow: inset 0 0 0 9999px rgba(59, 130, 246, 0.18);
+    }
+    body.dark .course-cell.drag-preview {
+      box-shadow: inset 0 0 0 9999px rgba(96, 165, 250, 0.22);
+    }
     * {
       box-sizing: border-box;
     }
@@ -412,6 +418,29 @@ body.dark #courseModal input {
     let isDragging = false;
     let dragStartKey = null;
     let dragEndKey = null;
+    let dragPreviewKeys = [];
+    function getDragRangeKeys(startKey, endKey) {
+  if (!startKey || !endKey) return [];
+
+  const [day1, p1] = startKey.split("-");
+  const [day2, p2] = endKey.split("-");
+
+  if (day1 !== day2) return [];
+
+  const start = Math.min(Number(p1), Number(p2));
+  const end = Math.max(Number(p1), Number(p2));
+
+  const keys = [];
+  for (let i = start; i <= end; i++) {
+    keys.push(`${day1}-${i}`);
+  }
+  return keys;
+}
+
+function updateDragPreview() {
+  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragEndKey);
+  initSchedule();
+}
     function fillRange(startKey, endKey) {
   const [day1, p1] = startKey.split("-");
   const [day2, p2] = endKey.split("-");
@@ -755,18 +784,25 @@ function deleteCourseFromModal() {
   const td = document.createElement("td");
   td.className = "course-cell";
 
-  if (selectedKey === key) {
-    td.classList.add("selected");
-  }
+if (selectedKey === key) {
+  td.classList.add("selected");
+}
+
+if (dragPreviewKeys.includes(key)) {
+  td.classList.add("drag-preview");
+}
 
   td.onmousedown = () => {
   isDragging = true;
   dragStartKey = key;
+  dragEndKey = key;
+  updateDragPreview();
 };
 
 td.onmouseenter = () => {
   if (isDragging) {
     dragEndKey = key;
+    updateDragPreview();
   }
 };
 
@@ -775,15 +811,19 @@ td.onmouseup = () => {
 
   isDragging = false;
 
-  // 如果只是點一下（沒有拖）
+  // 如果只是點一下
   if (!dragEndKey || dragStartKey === dragEndKey) {
+    dragPreviewKeys = [];
     openModal(key);
+    initSchedule();
     return;
   }
 
   fillRange(dragStartKey, dragEndKey);
   dragStartKey = null;
   dragEndKey = null;
+  dragPreviewKeys = [];
+  initSchedule();
 };
 
   const currentCourse = scheduleData[key];
