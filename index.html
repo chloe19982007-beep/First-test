@@ -4,9 +4,10 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#3b82f6">
   <title>我的課表</title>
+
   <style>
     * {
       box-sizing: border-box;
@@ -37,6 +38,44 @@
       margin-bottom: 24px;
     }
 
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      background: #3b82f6;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    .delete-btn {
+      background: #ef4444;
+    }
+
+    .delete-btn:hover {
+      background: #dc2626;
+    }
+
+    .secondary-btn {
+      background: #64748b;
+    }
+
+    .secondary-btn:hover {
+      background: #475569;
+    }
+
     .table-wrap {
       overflow-x: auto;
       background: white;
@@ -64,11 +103,11 @@
     }
 
     .time-col {
-  background: #f3f6fc;
-  font-weight: 600;
-  width: 120px;
-  line-height: 1.5;
-}
+      background: #f3f6fc;
+      font-weight: 600;
+      width: 120px;
+      line-height: 1.5;
+    }
 
     .course-cell {
       height: 90px;
@@ -79,6 +118,11 @@
 
     .course-cell:hover {
       background: #f0f6ff;
+    }
+
+    .course-cell.selected {
+      outline: 3px solid #2563eb;
+      outline-offset: -3px;
     }
 
     .course-name {
@@ -97,35 +141,6 @@
       font-size: 14px;
     }
 
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin: 20px 0;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: none;
-      background: #3b82f6;
-      color: white;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 15px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #2563eb;
-    }
-
-    .hint {
-      margin-top: 18px;
-      color: #666;
-      font-size: 14px;
-      text-align: center;
-    }
-
     .editor {
       margin-top: 24px;
       background: white;
@@ -137,6 +152,12 @@
     .editor h2 {
       margin-top: 0;
       font-size: 22px;
+    }
+
+    .selected-info {
+      margin-bottom: 16px;
+      color: #444;
+      font-size: 15px;
     }
 
     .editor-grid {
@@ -170,26 +191,67 @@
       flex-wrap: wrap;
     }
 
-    .delete-btn {
-      background: #ef4444;
+    .hint {
+      margin-top: 18px;
+      color: #666;
+      font-size: 14px;
+      text-align: center;
     }
 
-    .delete-btn:hover {
-      background: #dc2626;
+    body.dark {
+      background: #0f172a;
+      color: #e5e7eb;
     }
 
-    .secondary-btn {
-      background: #64748b;
+    body.dark .table-wrap,
+    body.dark .editor {
+      background: #111827;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
 
-    .secondary-btn:hover {
-      background: #475569;
+    body.dark th {
+      background: #1e3a8a;
+      color: #f9fafb;
     }
 
-    .selected-info {
-      margin-bottom: 16px;
-      color: #444;
-      font-size: 15px;
+    body.dark th,
+    body.dark td {
+      border-color: #334155;
+    }
+
+    body.dark .time-col {
+      background: #1f2937;
+      color: #f3f4f6;
+    }
+
+    body.dark .subtitle,
+    body.dark .hint,
+    body.dark .selected-info,
+    body.dark .field label,
+    body.dark .course-info {
+      color: #cbd5e1;
+    }
+
+    body.dark .empty {
+      color: #64748b;
+    }
+
+    body.dark .field input {
+      background: #0f172a;
+      color: #f8fafc;
+      border-color: #475569;
+    }
+
+    body.dark .course-cell {
+      background: #0b1220;
+    }
+
+    body.dark .course-cell:hover {
+      background: #172033;
+    }
+
+    body.dark .course-cell.selected {
+      outline: 3px solid #60a5fa;
     }
 
     @media (max-width: 768px) {
@@ -217,8 +279,9 @@
       <button onclick="clearSchedule()">清空課表</button>
       <button onclick="exportImage()">匯出圖片</button>
       <button onclick="downloadJSON()">下載備份</button>
-<button onclick="document.getElementById('importFile').click()">匯入備份</button>
-<input id="importFile" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button onclick="document.getElementById('importFile').click()">匯入備份</button>
+      <button onclick="toggleDarkMode()">深色模式</button>
+      <input id="importFile" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
     </div>
 
     <div class="table-wrap">
@@ -271,21 +334,22 @@
     </div>
 
     <div class="hint">
-      現在是面板編輯版。點格子後，在下方編輯並儲存。
+      點格子後在下方編輯，資料會自動儲存到瀏覽器。
     </div>
   </div>
 
   <script>
     const periods = [
-  { label: "第1節", time: "08:10–09:00" },
-  { label: "第2節", time: "09:10–10:00" },
-  { label: "第3節", time: "10:20–11:10" },
-  { label: "第4節", time: "11:20–12:10" },
-  { label: "第5節", time: "13:10–14:00" },
-  { label: "第6節", time: "14:10–15:00" },
-  { label: "第7節", time: "15:10–16:00" },
-  { label: "第8節", time: "16:10–17:00" }
-];
+      { label: "第1節", time: "08:10–09:00" },
+      { label: "第2節", time: "09:10–10:00" },
+      { label: "第3節", time: "10:20–11:10" },
+      { label: "第4節", time: "11:20–12:10" },
+      { label: "第5節", time: "13:10–14:00" },
+      { label: "第6節", time: "14:10–15:00" },
+      { label: "第7節", time: "15:10–16:00" },
+      { label: "第8節", time: "16:10–17:00" }
+    ];
+
     const dayLabels = {
       mon: "星期一",
       tue: "星期二",
@@ -293,10 +357,60 @@
       thu: "星期四",
       fri: "星期五"
     };
+
     const days = ["mon", "tue", "wed", "thu", "fri"];
 
     let scheduleData = JSON.parse(localStorage.getItem("scheduleData")) || {};
     let selectedKey = null;
+
+    function getAutoColor(courseName) {
+      if (!courseName) return "#bfdbfe";
+
+      if (
+        courseName.includes("民法") ||
+        courseName.includes("法律") ||
+        courseName.includes("刑法")
+      ) {
+        return "#fecdd3";
+      }
+
+      if (
+        courseName.includes("哲學") ||
+        courseName.includes("倫理") ||
+        courseName.includes("邏輯")
+      ) {
+        return "#ddd6fe";
+      }
+
+      if (
+        courseName.includes("會計") ||
+        courseName.includes("經濟") ||
+        courseName.includes("統計")
+      ) {
+        return "#fde68a";
+      }
+
+      if (
+        courseName.includes("大腦") ||
+        courseName.includes("心理") ||
+        courseName.includes("科學")
+      ) {
+        return "#bbf7d0";
+      }
+
+      return "#bfdbfe";
+    }
+
+    function applyDarkMode() {
+      const isDark = localStorage.getItem("darkMode") === "true";
+      document.body.classList.toggle("dark", isDark);
+    }
+
+    function toggleDarkMode() {
+      const isDark = localStorage.getItem("darkMode") === "true";
+      localStorage.setItem("darkMode", (!isDark).toString());
+      applyDarkMode();
+    }
 
     function initSchedule() {
       const tbody = document.getElementById("scheduleBody");
@@ -316,9 +430,14 @@
 
           const key = `${day}-${rowIndex + 1}`;
 
+          if (selectedKey === key) {
+            td.classList.add("selected");
+          }
+
           td.onclick = () => {
             selectedKey = key;
             loadEditor(key);
+            initSchedule();
           };
 
           if (scheduleData[key]) {
@@ -331,7 +450,7 @@
               </div>
             `;
           } else {
-            td.style.background = "#fcfdff";
+            td.style.background = "";
             td.innerHTML = `<div class="empty">－</div>`;
           }
 
@@ -365,7 +484,7 @@
       const room = document.getElementById("courseRoom").value.trim();
       const teacher = document.getElementById("courseTeacher").value.trim();
       const inputColor = document.getElementById("courseColor").value.trim();
-const color = inputColor || getAutoColor(name);
+      const color = inputColor || getAutoColor(name);
 
       if (!name) {
         alert("請先輸入課名");
@@ -402,6 +521,7 @@ const color = inputColor || getAutoColor(name);
       document.getElementById("courseColor").value = "#bfdbfe";
       document.getElementById("selectedInfo").textContent = "請先點一個課表格子";
       selectedKey = null;
+      initSchedule();
     }
 
     function fillSampleData() {
@@ -427,75 +547,54 @@ const color = inputColor || getAutoColor(name);
       initSchedule();
       clearEditor();
     }
+
     function exportImage() {
-  const target = document.querySelector(".table-wrap");
+      const target = document.querySelector(".table-wrap");
 
-  html2canvas(target).then(canvas => {
-    const link = document.createElement("a");
-    link.download = "我的課表.png";
-    link.href = canvas.toDataURL();
-    link.click();
-  });
-}
-function getAutoColor(courseName) {
-  if (!courseName) return "#bfdbfe";
-
-  if (courseName.includes("民法") || courseName.includes("法律") || courseName.includes("刑法")) {
-    return "#fecdd3";
-  }
-
-  if (courseName.includes("哲學") || courseName.includes("倫理") || courseName.includes("邏輯")) {
-    return "#ddd6fe";
-  }
-
-  if (courseName.includes("會計") || courseName.includes("經濟") || courseName.includes("統計")) {
-    return "#fde68a";
-  }
-
-  if (courseName.includes("大腦") || courseName.includes("心理") || courseName.includes("科學")) {
-    return "#bbf7d0";
-  }
-
-  return "#bfdbfe";
-}
-function downloadJSON() {
-  const dataStr = JSON.stringify(scheduleData, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "schedule-backup.json";
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
-function importJSON(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    try {
-      const importedData = JSON.parse(e.target.result);
-
-      scheduleData = importedData;
-      localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
-      initSchedule();
-      clearEditor();
-
-      alert("匯入成功");
-    } catch (error) {
-      alert("JSON 格式錯誤，匯入失敗");
+      html2canvas(target).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "我的課表.png";
+        link.href = canvas.toDataURL();
+        link.click();
+      });
     }
-  };
 
-  reader.readAsText(file);
-}
-    
+    function downloadJSON() {
+      const dataStr = JSON.stringify(scheduleData, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
 
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "schedule-backup.json";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          scheduleData = importedData;
+          localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
+          initSchedule();
+          clearEditor();
+          alert("匯入成功");
+        } catch (error) {
+          alert("JSON 格式錯誤，匯入失敗");
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    applyDarkMode();
     initSchedule();
   </script>
 </body>
