@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
-<thead>
-  <tr id="tableHeadRow">
-    <th class="time-col">節次</th>
-  </tr>
-</thead>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的課表</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     * {
@@ -85,7 +87,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 900px;
+      min-width: 1000px;
     }
 
     th, td {
@@ -112,6 +114,7 @@
       background: #fcfdff;
       transition: 0.2s;
       cursor: pointer;
+      min-width: 120px;
     }
 
     .course-cell:hover {
@@ -284,16 +287,9 @@
     </div>
 
     <div class="table-wrap">
-      <table>
+      <table id="scheduleTable">
         <thead>
-          <tr>
-            <th class="time-col">節次</th>
-            <th>星期一</th>
-            <th>星期二</th>
-            <th>星期三</th>
-            <th>星期四</th>
-            <th>星期五</th>
-          </tr>
+          <tr id="tableHeadRow"></tr>
         </thead>
         <tbody id="scheduleBody"></tbody>
       </table>
@@ -350,20 +346,30 @@
     ];
 
     const dayLabels = {
-  mon: "星期一",
-  tue: "星期二",
-  wed: "星期三",
-  thu: "星期四",
-  fri: "星期五",
-  sat: "星期六",
-  sun: "星期日"
-};
+      mon: "星期一",
+      tue: "星期二",
+      wed: "星期三",
+      thu: "星期四",
+      fri: "星期五",
+      sat: "星期六",
+      sun: "星期日"
+    };
 
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
 
+    let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
     let scheduleData = JSON.parse(localStorage.getItem("scheduleData")) || {};
     let selectedKey = null;
+
+    function getVisibleDays() {
+      return showWeekend ? allDays : allDays.slice(0, 5);
+    }
+
+    function toggleWeekend() {
+      showWeekend = !showWeekend;
+      localStorage.setItem("showWeekend", JSON.stringify(showWeekend));
+      initSchedule();
+    }
 
     function getAutoColor(courseName) {
       if (!courseName) return "#bfdbfe";
@@ -414,15 +420,26 @@ let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
       applyDarkMode();
     }
 
+    function renderTableHead(visibleDays) {
+      const headRow = document.getElementById("tableHeadRow");
+      headRow.innerHTML = "";
+
+      const timeHead = document.createElement("th");
+      timeHead.className = "time-col";
+      timeHead.textContent = "節次";
+      headRow.appendChild(timeHead);
+
+      visibleDays.forEach(day => {
+        const th = document.createElement("th");
+        th.textContent = dayLabels[day];
+        headRow.appendChild(th);
+      });
+    }
+
     function initSchedule() {
       const visibleDays = getVisibleDays();
+      renderTableHead(visibleDays);
 
-const headRow = document.getElementById("tableHeadRow");
-headRow.innerHTML = `<th class="time-col">節次</th>`;
-
-visibleDays.forEach(day => {
-  headRow.innerHTML += `<th>${dayLabels[day]}</th>`;
-});
       const tbody = document.getElementById("scheduleBody");
       tbody.innerHTML = "";
 
@@ -434,7 +451,7 @@ visibleDays.forEach(day => {
         timeTd.innerHTML = `${period.label}<br><span style="font-size:12px; color:#666;">${period.time}</span>`;
         tr.appendChild(timeTd);
 
-        visibleDays.forEach((day) => {
+        visibleDays.forEach(day => {
           const td = document.createElement("td");
           td.className = "course-cell";
 
@@ -451,7 +468,7 @@ visibleDays.forEach(day => {
           };
 
           if (scheduleData[key]) {
-            td.style.background = scheduleData[key].color || "#dbeafe";
+            td.style.background = scheduleData[key].color || "#bfdbfe";
             td.innerHTML = `
               <div class="course-name">${scheduleData[key].name}</div>
               <div class="course-info">
@@ -520,8 +537,8 @@ visibleDays.forEach(day => {
 
       delete scheduleData[selectedKey];
       localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
-      initSchedule();
       clearEditor();
+      initSchedule();
     }
 
     function clearEditor() {
@@ -544,7 +561,9 @@ visibleDays.forEach(day => {
         "wed-2": { name: "民法概要", room: "法學院 A棟", teacher: "陳老師", color: "#fecdd3" },
         "thu-5": { name: "大腦與我", room: "綜院 113", teacher: "周老師", color: "#bbf7d0" },
         "fri-3": { name: "會計學", room: "商院 102", teacher: "林老師", color: "#fde68a" },
-        "fri-4": { name: "會計學", room: "商院 102", teacher: "林老師", color: "#fde68a" }
+        "fri-4": { name: "會計學", room: "商院 102", teacher: "林老師", color: "#fde68a" },
+        "sat-2": { name: "社團活動", room: "活動中心", teacher: "學生自治", color: "#bfdbfe" },
+        "sun-4": { name: "自主讀書", room: "圖書館", teacher: "自己", color: "#c7d2fe" }
       };
 
       localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
@@ -554,8 +573,8 @@ visibleDays.forEach(day => {
     function clearSchedule() {
       scheduleData = {};
       localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
-      initSchedule();
       clearEditor();
+      initSchedule();
     }
 
     function exportImage() {
@@ -581,15 +600,6 @@ visibleDays.forEach(day => {
 
       URL.revokeObjectURL(url);
     }
-    function getVisibleDays() {
-  return showWeekend ? allDays : allDays.slice(0, 5);
-}
-
-function toggleWeekend() {
-  showWeekend = !showWeekend;
-  localStorage.setItem("showWeekend", JSON.stringify(showWeekend));
-  initSchedule();
-}
 
     function importJSON(event) {
       const file = event.target.files[0];
@@ -602,8 +612,8 @@ function toggleWeekend() {
           const importedData = JSON.parse(e.target.result);
           scheduleData = importedData;
           localStorage.setItem("scheduleData", JSON.stringify(scheduleData));
-          initSchedule();
           clearEditor();
+          initSchedule();
           alert("匯入成功");
         } catch (error) {
           alert("JSON 格式錯誤，匯入失敗");
