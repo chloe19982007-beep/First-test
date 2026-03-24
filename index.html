@@ -248,6 +248,13 @@
       .course-cell {
         height: 80px;
       }
+      .course-cell.drag-preview {
+        box-shadow: inset 0 0 0 9999px rgba(59, 130, 246, 0.18);
+  }
+
+    body.dark .course-cell.drag-preview {
+      box-shadow: inset 0 0 0 9999px rgba(96, 165, 250, 0.22);
+    }
     }
   </style>
 </head>
@@ -319,6 +326,102 @@
   </div>
 
   <script>
+    function getDragRangeKeys(startKey, endKey) {
+  if (!startKey || !endKey) return [];
+
+  const [day1, p1] = startKey.split("-");
+  const [day2, p2] = endKey.split("-");
+
+  if (day1 !== day2) return [];
+
+  const start = Math.min(Number(p1), Number(p2));
+  const end = Math.max(Number(p1), Number(p2));
+
+  const keys = [];
+  for (let i = start; i <= end; i++) {
+    keys.push(`${day1}-${i}`);
+  }
+  return keys;
+}
+
+function updateDragPreview() {
+  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragEndKey);
+  initSchedule();
+}
+
+function startDrag(key) {
+  isDragging = true;
+  dragStartKey = key;
+  dragEndKey = key;
+  updateDragPreview();
+}
+
+function moveDrag(key) {
+  if (!isDragging) return;
+  dragEndKey = key;
+  updateDragPreview();
+}
+
+function endDrag(key) {
+  if (!isDragging) return;
+
+  isDragging = false;
+  dragEndKey = key;
+
+  const rangeKeys = getDragRangeKeys(dragStartKey, dragEndKey);
+
+  if (rangeKeys.length <= 1) {
+    dragPreviewKeys = [];
+    dragStartKey = null;
+    dragEndKey = null;
+    openModal(key);
+    return;
+  }
+
+  dragFillKeys = rangeKeys;
+  dragPreviewKeys = [];
+  openModal(rangeKeys[0]);
+  dragStartKey = null;
+  dragEndKey = null;
+}
+
+function handleTouchMove(event) {
+  if (!isDragging) return;
+
+  const touch = event.touches[0];
+  if (!touch) return;
+
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!el) return;
+
+  const cell = el.closest("[data-key]");
+  if (!cell) return;
+
+  const key = cell.dataset.key;
+  if (key) {
+    moveDrag(key);
+  }
+}
+
+function handleTouchEnd(event) {
+  if (!isDragging) return;
+
+  let key = dragEndKey || dragStartKey;
+
+  const touch = event.changedTouches && event.changedTouches[0];
+  if (touch) {
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cell = el && el.closest("[data-key]");
+    if (cell && cell.dataset.key) {
+      key = cell.dataset.key;
+    }
+  }
+
+  endDrag(key);
+
+  document.removeEventListener("touchmove", handleTouchMove);
+  document.removeEventListener("touchend", handleTouchEnd);
+}
     const periods = [
       { label: "第1節", time: "08:10–09:00" },
       { label: "第2節", time: "09:10–10:00" },
@@ -353,6 +456,11 @@
 
     let scheduleData = JSON.parse(localStorage.getItem(`scheduleData_${currentSemester}`)) || {};
     let selectedKey = null;
+    let isDragging = false;
+    let dragStartKey = null;
+    let dragEndKey = null;
+    let dragPreviewKeys = [];
+    let dragFillKeys = [];
 
     function saveSemesterList() {
       localStorage.setItem("semesterList", JSON.stringify(semesterList));
@@ -550,14 +658,30 @@
           if (selectedKey === key) {
             td.classList.add("selected");
           }
+          if (dragPreviewKeys.includes(key)) {
+            td.classList.add("drag-preview");
+          }
 
-          td.onclick = () => {
-            openModal(key);
+          td.dataset.key = key;
+
+          td.onmousedown = (event) => {
+            event.preventDefault();
+            startDrag(key);
           };
 
-          td.ontouchend = (event) => {
+          td.onmouseenter = () => {
+            moveDrag(key);
+          };
+
+          td.onmouseup = () => {
+            endDrag(key);
+          };
+
+          td.ontouchstart = (event) => {
             event.preventDefault();
-            openModal(key);
+            startDrag(key);
+            document.addEventListener("touchmove", handleTouchMove, { passive: false });
+            document.addEventListener("touchend", handleTouchEnd, { passive: false });
           };
 
           const currentCourse = scheduleData[key];
@@ -613,6 +737,8 @@
     function closeModal() {
       document.getElementById("courseModal").style.display = "none";
       selectedKey = null;
+      dragFillKeys = [];
+      dragPreviewKeys = [];
       initSchedule();
     }
 
@@ -640,12 +766,23 @@
         return;
       }
 
-      scheduleData[selectedKey] = {
-        name,
-        room,
-        teacher,
-        color
-      };
+      if (dragFillKeys.length > 0) {
+        dragFillKeys.forEach(key => {
+          scheduleData[key] = {
+            name,
+            room,
+            teacher,
+            color
+          };
+        });
+      } else {
+        scheduleData[selectedKey] = {
+          name,
+          room,
+          teacher,
+          color
+        };
+      }
 
       saveCurrentSemesterData();
       closeModal();
@@ -655,7 +792,13 @@
     function deleteCourseFromModal() {
       if (!selectedKey) return;
 
-      delete scheduleData[selectedKey];
+      if (dragFillKeys.length > 0) {
+  dragFillKeys.forEach(key => {
+    delete scheduleData[key];
+  });
+} else {
+  delete scheduleData[selectedKey];
+}
       saveCurrentSemesterData();
       closeModal();
       initSchedule();
