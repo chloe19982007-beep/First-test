@@ -179,6 +179,13 @@
     .modal-box {
       background: white;
     }
+    .course-cell.drag-preview {
+      box-shadow: inset 0 0 0 9999px rgba(59, 130, 246, 0.18);
+    }
+
+    body.dark .course-cell.drag-preview {
+      box-shadow: inset 0 0 0 9999px rgba(96, 165, 250, 0.22);
+    }
 
     body.dark {
       background: #0f172a;
@@ -326,6 +333,80 @@
   </div>
 
   <script>
+  function getDragRangeKeys(startKey, endKey) {
+    if (!startKey || !endKey) return [];
+
+    const [day1, p1] = startKey.split("-");
+    const [day2, p2] = endKey.split("-");
+
+    if (day1 !== day2) return [];
+
+    const start = Math.min(Number(p1), Number(p2));
+    const end = Math.max(Number(p1), Number(p2));
+
+    const keys = [];
+    for (let i = start; i <= end; i++) {
+      keys.push(`${day1}-${i}`);
+    }
+    return keys;
+}
+
+function updateDragPreview() {
+  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragCurrentKey);
+  initSchedule();
+}
+
+function beginPointerDrag(key) {
+  isDragging = true;
+  dragStartKey = key;
+  dragCurrentKey = key;
+  dragPreviewKeys = [key];
+  dragFillKeys = [];
+  pointerMoved = false;
+  initSchedule();
+}
+
+function handlePointerMove(event) {
+  if (!isDragging) return;
+
+  const el = document.elementFromPoint(event.clientX, event.clientY);
+  if (!el) return;
+
+  const cell = el.closest("[data-key]");
+  if (!cell) return;
+
+  const key = cell.dataset.key;
+  if (!key) return;
+
+  if (key !== dragCurrentKey) {
+    dragCurrentKey = key;
+    pointerMoved = true;
+    updateDragPreview();
+  }
+}
+
+function handlePointerUp() {
+  if (!isDragging) return;
+
+  const rangeKeys = getDragRangeKeys(dragStartKey, dragCurrentKey);
+
+  isDragging = false;
+  dragPreviewKeys = [];
+
+  if (!pointerMoved || rangeKeys.length <= 1) {
+    const singleKey = dragStartKey;
+    dragStartKey = null;
+    dragCurrentKey = null;
+    openModal(singleKey);
+    return;
+  }
+
+  dragFillKeys = rangeKeys;
+  const firstKey = rangeKeys[0];
+  dragStartKey = null;
+  dragCurrentKey = null;
+  openModal(firstKey);
+}
     function getDragRangeKeys(startKey, endKey) {
   if (!startKey || !endKey) return [];
 
@@ -455,12 +536,12 @@ function handleTouchEnd(event) {
     }
 
     let scheduleData = JSON.parse(localStorage.getItem(`scheduleData_${currentSemester}`)) || {};
-    let selectedKey = null;
     let isDragging = false;
     let dragStartKey = null;
-    let dragEndKey = null;
+    let dragCurrentKey = null;
     let dragPreviewKeys = [];
     let dragFillKeys = [];
+    let pointerMoved = false;
 
     function saveSemesterList() {
       localStorage.setItem("semesterList", JSON.stringify(semesterList));
@@ -654,6 +735,12 @@ function handleTouchEnd(event) {
 
           const td = document.createElement("td");
           td.className = "course-cell";
+          td.dataset.key = key;
+
+          td.onpointerdown = (event) => {
+            event.preventDefault();
+            beginPointerDrag(key);
+          };
 
           if (selectedKey === key) {
             td.classList.add("selected");
@@ -739,6 +826,10 @@ function handleTouchEnd(event) {
       selectedKey = null;
       dragFillKeys = [];
       dragPreviewKeys = [];
+      isDragging = false;
+      dragStartKey = null;
+      dragCurrentKey = null;
+      pointerMoved = false;
       initSchedule();
     }
 
@@ -752,57 +843,31 @@ function handleTouchEnd(event) {
       document.getElementById("modalCourseColor").value = color;
     }
 
-    function saveCourseFromModal() {
-      if (!selectedKey) return;
-
-      const name = document.getElementById("modalCourseName").value.trim();
-      const room = document.getElementById("modalCourseRoom").value.trim();
-      const teacher = document.getElementById("modalCourseTeacher").value.trim();
-      const inputColor = document.getElementById("modalCourseColor").value.trim();
-      const color = inputColor || getAutoColor(name);
-
-      if (!name) {
-        alert("請先輸入課名");
-        return;
-      }
-
-      if (dragFillKeys.length > 0) {
-        dragFillKeys.forEach(key => {
-          scheduleData[key] = {
-            name,
-            room,
-            teacher,
-            color
-          };
-        });
-      } else {
-        scheduleData[selectedKey] = {
-          name,
-          room,
-          teacher,
-          color
-        };
-      }
-
-      saveCurrentSemesterData();
-      closeModal();
-      initSchedule();
-    }
-
-    function deleteCourseFromModal() {
-      if (!selectedKey) return;
-
-      if (dragFillKeys.length > 0) {
-  dragFillKeys.forEach(key => {
-    delete scheduleData[key];
-  });
+    function saveCourseFromModal() {if (dragFillKeys.length > 0) {
+  dragFillKeys.forEach(key => {
+    scheduleData[key] = {
+      name,
+      room,
+      teacher,
+      color
+    };
+  });
 } else {
-  delete scheduleData[selectedKey];
-}
-      saveCurrentSemesterData();
-      closeModal();
-      initSchedule();
-    }
+  scheduleData[selectedKey] = {
+    name,
+    room,
+    teacher,
+    color
+  };
+}}
+
+    function deleteCourseFromModal() {if (dragFillKeys.length > 0) {
+  dragFillKeys.forEach(key => {
+    delete scheduleData[key];
+  });
+} else {
+    delete scheduleData[selectedKey];
+}}
 
     function fillSampleData() {
       scheduleData = {
@@ -903,6 +968,9 @@ function handleTouchEnd(event) {
 
       reader.readAsText(file);
     }
+
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
 
     applyDarkMode();
     saveSemesterList();
