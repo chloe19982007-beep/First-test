@@ -157,6 +157,16 @@
       box-shadow: inset 0 0 0 9999px rgba(59, 130, 246, 0.18);
     }
 
+    .lunch-cell {
+      background: #e2e8f0;
+      color: #475569;
+      cursor: not-allowed;
+      font-weight: 700;
+    }
+    .lunch-cell .course-name {
+      color: #475569;
+    }
+
     body.dark .course-cell.drag-preview {
       box-shadow: inset 0 0 0 9999px rgba(96, 165, 250, 0.22);
     }
@@ -293,6 +303,8 @@
       <button onclick="exportImage()">匯出圖片</button>
       <button onclick="downloadJSON()">下載備份</button>
       <button onclick="toggleWeekend()">顯示 / 隱藏週末</button>
+      <button id="lunchModeBtn" onclick="toggleLunchMode()">午休模式：開</button>
+      <button id="skipLunchBtn" onclick="toggleSkipLunch()">跳過午休：關</button>
       <button onclick="document.getElementById('importFile').click()">匯入備份</button>
       <button onclick="toggleDarkMode()">深色模式</button>
       <input id="importFile" type="file" accept=".json" style="display:none" onchange="importJSON(event)">
@@ -472,6 +484,9 @@
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
     let showWeekend = JSON.parse(localStorage.getItem("showWeekend")) || false;
+    let lunchModeEnabled = JSON.parse(localStorage.getItem("lunchModeEnabled"));
+    if (lunchModeEnabled === null) lunchModeEnabled = true;
+    let skipLunch = JSON.parse(localStorage.getItem("skipLunch")) || false;
 
     let semesterList = JSON.parse(localStorage.getItem("semesterList")) || ["113-1"];
     let currentSemester = localStorage.getItem("currentSemester") || "113-1";
@@ -485,6 +500,32 @@
     function saveSemesterList() {
       localStorage.setItem("semesterList", JSON.stringify(semesterList));
       localStorage.setItem("currentSemester", currentSemester);
+    }
+
+    function saveLunchSettings() {
+      localStorage.setItem("lunchModeEnabled", JSON.stringify(lunchModeEnabled));
+      localStorage.setItem("skipLunch", JSON.stringify(skipLunch));
+    }
+
+    function toggleLunchMode() {
+      lunchModeEnabled = !lunchModeEnabled;
+      saveLunchSettings();
+      updateLunchButtons();
+      initSchedule();
+    }
+
+    function toggleSkipLunch() {
+      skipLunch = !skipLunch;
+      saveLunchSettings();
+      updateLunchButtons();
+      initSchedule();
+    }
+
+    function updateLunchButtons() {
+      const lunchBtn = document.getElementById("lunchModeBtn");
+      const skipBtn = document.getElementById("skipLunchBtn");
+      if (lunchBtn) lunchBtn.textContent = `午休模式：${lunchModeEnabled ? "開" : "關"}`;
+      if (skipBtn) skipBtn.textContent = `跳過午休：${skipLunch ? "開" : "關"}`;
     }
 
     function loadCurrentSemesterData() {
@@ -659,6 +700,9 @@
       const skippedCells = {};
 
       periods.forEach((period, rowIndex) => {
+        const periodNumber = rowIndex + 1;
+        if (skipLunch && periodNumber === 5) return;
+
         const tr = document.createElement("tr");
 
         const timeTd = document.createElement("td");
@@ -667,14 +711,22 @@
         tr.appendChild(timeTd);
 
         visibleDays.forEach(day => {
-          const periodNumber = rowIndex + 1;
           const key = `${day}-${periodNumber}`;
+          const isLunchRow = lunchModeEnabled && !skipLunch && periodNumber === 5;
+
+          const td = document.createElement("td");
+          td.dataset.key = key;
+
+          if (isLunchRow) {
+            td.className = "course-cell lunch-cell";
+            td.innerHTML = `<div class="course-name">午休</div><div class="course-info">不可編輯</div>`;
+            tr.appendChild(td);
+            return;
+          }
 
           if (skippedCells[key]) return;
 
-          const td = document.createElement("td");
           td.className = "course-cell";
-          td.dataset.key = key;
 
           // Single pointer event handler
           td.addEventListener('pointerdown', (event) => {
@@ -723,10 +775,16 @@
     }
 
     function openModal(key) {
+      const [day, period] = key.split("-");
+      const periodNumber = Number(period);
+
+      if (lunchModeEnabled && !skipLunch && periodNumber === 5) {
+        return;
+      }
+
       selectedKey = key;
 
       const data = scheduleData[key] || {};
-      const [day, period] = key.split("-");
 
       let slotInfo = `${currentSemester}｜${dayLabels[day]} 第${period}節`;
       if (dragFillKeys.length > 1) {
@@ -904,6 +962,7 @@
     applyDarkMode();
     saveSemesterList();
     loadCurrentSemesterData();
+    updateLunchButtons();
     initSchedule();
   </script>
 </body>
