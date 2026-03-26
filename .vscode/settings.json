@@ -1,0 +1,9 @@
+{
+  "yaml.validate": false,
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.exclude": {
+    "**/.vscode-remote/**": true
+  }
+}
