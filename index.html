@@ -141,7 +141,7 @@
       min-width: 120px;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: manipulation;
+      touch-action: none;
     }
 
     .course-cell:hover {
@@ -359,158 +359,91 @@
     return keys;
 }
 
-function updateDragPreview() {
-  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragCurrentKey);
-  initSchedule();
-}
-
-function beginPointerDrag(key) {
-  isDragging = true;
+function handlePointerDown(event, key) {
+  // Prevent default to avoid text selection/scrolling
+  event.preventDefault();
+  
+  // Reset state
+  isDragging = false;
   dragStartKey = key;
   dragCurrentKey = key;
   dragPreviewKeys = [key];
   dragFillKeys = [];
   pointerMoved = false;
-  initSchedule();
+  
+  // Add document listeners for move/up (only when dragging starts)
+  document.addEventListener('pointermove', handlePointerMove);
+  document.addEventListener('pointerup', handlePointerUp);
+  document.addEventListener('pointercancel', handlePointerCancel);
 }
 
 function handlePointerMove(event) {
-  if (!isDragging) return;
-
-  const el = document.elementFromPoint(event.clientX, event.clientY);
-  if (!el) return;
-
-  const cell = el.closest("[data-key]");
+  if (!dragStartKey) return;
+  
+  // Use elementFromPoint to find cell under pointer
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  if (!element) return;
+  
+  const cell = element.closest('[data-key]');
   if (!cell) return;
-
+  
   const key = cell.dataset.key;
   if (!key) return;
-
+  
+  // Only update if we're in a different cell
   if (key !== dragCurrentKey) {
     dragCurrentKey = key;
     pointerMoved = true;
-    updateDragPreview();
+    
+    // Update preview for same-day ranges only
+    dragPreviewKeys = getDragRangeKeys(dragStartKey, dragCurrentKey);
+    initSchedule();
   }
 }
 
-function handlePointerUp() {
-  if (!isDragging) return;
-
+function handlePointerUp(event) {
+  // Clean up listeners
+  document.removeEventListener('pointermove', handlePointerMove);
+  document.removeEventListener('pointerup', handlePointerUp);
+  document.removeEventListener('pointercancel', handlePointerCancel);
+  
+  if (!dragStartKey) return;
+  
   const rangeKeys = getDragRangeKeys(dragStartKey, dragCurrentKey);
-
-  isDragging = false;
+  
+  // Clear preview
   dragPreviewKeys = [];
-
+  
   if (!pointerMoved || rangeKeys.length <= 1) {
-    const singleKey = dragStartKey;
-    dragStartKey = null;
-    dragCurrentKey = null;
-    openModal(singleKey);
-    return;
+    // Single cell click - open modal normally
+    selectedKey = dragStartKey;
+    openModal(dragStartKey);
+  } else {
+    // Multi-cell selection - open modal for batch editing
+    dragFillKeys = rangeKeys;
+    selectedKey = rangeKeys[0];
+    openModal(rangeKeys[0]);
   }
-
-  dragFillKeys = rangeKeys;
-  const firstKey = rangeKeys[0];
+  
+  // Reset state
+  isDragging = false;
   dragStartKey = null;
   dragCurrentKey = null;
-  openModal(firstKey);
-}
-    function getDragRangeKeys(startKey, endKey) {
-  if (!startKey || !endKey) return [];
-
-  const [day1, p1] = startKey.split("-");
-  const [day2, p2] = endKey.split("-");
-
-  if (day1 !== day2) return [];
-
-  const start = Math.min(Number(p1), Number(p2));
-  const end = Math.max(Number(p1), Number(p2));
-
-  const keys = [];
-  for (let i = start; i <= end; i++) {
-    keys.push(`${day1}-${i}`);
-  }
-  return keys;
+  pointerMoved = false;
 }
 
-function updateDragPreview() {
-  dragPreviewKeys = getDragRangeKeys(dragStartKey, dragEndKey);
-  initSchedule();
-}
-
-function startDrag(key) {
-  isDragging = true;
-  dragStartKey = key;
-  dragEndKey = key;
-  updateDragPreview();
-}
-
-function moveDrag(key) {
-  if (!isDragging) return;
-  dragEndKey = key;
-  updateDragPreview();
-}
-
-function endDrag(key) {
-  if (!isDragging) return;
-
-  isDragging = false;
-  dragEndKey = key;
-
-  const rangeKeys = getDragRangeKeys(dragStartKey, dragEndKey);
-
-  if (rangeKeys.length <= 1) {
-    dragPreviewKeys = [];
-    dragStartKey = null;
-    dragEndKey = null;
-    openModal(key);
-    return;
-  }
-
-  dragFillKeys = rangeKeys;
+function handlePointerCancel() {
+  // Clean up on pointer cancel (e.g., system interruption)
+  document.removeEventListener('pointermove', handlePointerMove);
+  document.removeEventListener('pointerup', handlePointerUp);
+  document.removeEventListener('pointercancel', handlePointerCancel);
+  
   dragPreviewKeys = [];
-  openModal(rangeKeys[0]);
+  isDragging = false;
   dragStartKey = null;
-  dragEndKey = null;
-}
-
-function handleTouchMove(event) {
-  if (!isDragging) return;
-
-  const touch = event.touches[0];
-  if (!touch) return;
-
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  if (!el) return;
-
-  const cell = el.closest("[data-key]");
-  if (!cell) return;
-
-  const key = cell.dataset.key;
-  if (key) {
-    moveDrag(key);
-  }
-}
-
-function handleTouchEnd(event) {
-  if (!isDragging) return;
-
-  let key = dragEndKey || dragStartKey;
-
-  const touch = event.changedTouches && event.changedTouches[0];
-  if (touch) {
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cell = el && el.closest("[data-key]");
-    if (cell && cell.dataset.key) {
-      key = cell.dataset.key;
-    }
-  }
-
-  endDrag(key);
-
-  document.removeEventListener("touchmove", handleTouchMove);
-  document.removeEventListener("touchend", handleTouchEnd);
-}
+  dragCurrentKey = null;
+  pointerMoved = false;
+  initSchedule();
     const periods = [
       { label: "第1節", time: "08:10–09:00" },
       { label: "第2節", time: "09:10–10:00" },
@@ -745,10 +678,12 @@ function handleTouchEnd(event) {
           td.className = "course-cell";
           td.dataset.key = key;
 
-          td.onpointerdown = (event) => {
-            event.preventDefault();
-            beginPointerDrag(key);
-          };
+          // Single pointer event handler
+          td.addEventListener('pointerdown', (event) => {
+            handlePointerDown(event, key);
+            // Set pointer capture for better touch handling
+            event.target.setPointerCapture(event.pointerId);
+          });
 
           if (selectedKey === key) {
             td.classList.add("selected");
@@ -756,28 +691,6 @@ function handleTouchEnd(event) {
           if (dragPreviewKeys.includes(key)) {
             td.classList.add("drag-preview");
           }
-
-          td.dataset.key = key;
-
-          td.onmousedown = (event) => {
-            event.preventDefault();
-            startDrag(key);
-          };
-
-          td.onmouseenter = () => {
-            moveDrag(key);
-          };
-
-          td.onmouseup = () => {
-            endDrag(key);
-          };
-
-          td.ontouchstart = (event) => {
-            event.preventDefault();
-            startDrag(key);
-            document.addEventListener("touchmove", handleTouchMove, { passive: false });
-            document.addEventListener("touchend", handleTouchEnd, { passive: false });
-          };
 
           const currentCourse = scheduleData[key];
 
@@ -817,8 +730,12 @@ function handleTouchEnd(event) {
       const data = scheduleData[key] || {};
       const [day, period] = key.split("-");
 
-      document.getElementById("modalSlotInfo").textContent =
-        `${currentSemester}｜${dayLabels[day]} 第${period}節`;
+      let slotInfo = `${currentSemester}｜${dayLabels[day]} 第${period}節`;
+      if (dragFillKeys.length > 1) {
+        slotInfo += ` (已選取 ${dragFillKeys.length} 個時段)`;
+      }
+
+      document.getElementById("modalSlotInfo").textContent = slotInfo;
 
       document.getElementById("modalCourseName").value = data.name || "";
       document.getElementById("modalCourseRoom").value = data.room || "";
@@ -851,31 +768,40 @@ function handleTouchEnd(event) {
       document.getElementById("modalCourseColor").value = color;
     }
 
-    function saveCourseFromModal() {if (dragFillKeys.length > 0) {
-  dragFillKeys.forEach(key => {
-    scheduleData[key] = {
-      name,
-      room,
-      teacher,
-      color
-    };
-  });
-} else {
-  scheduleData[selectedKey] = {
-    name,
-    room,
-    teacher,
-    color
-  };
-}}
+    function saveCourseFromModal() {
+      const name = document.getElementById("modalCourseName").value.trim();
+      const room = document.getElementById("modalCourseRoom").value.trim();
+      const teacher = document.getElementById("modalCourseTeacher").value.trim();
+      const color = document.getElementById("modalCourseColor").value.trim() || getAutoColor(name);
+      
+      if (dragFillKeys.length > 0) {
+        // Apply to all selected cells
+        dragFillKeys.forEach(key => {
+          scheduleData[key] = { name, room, teacher, color };
+        });
+      } else {
+        // Single cell
+        scheduleData[selectedKey] = { name, room, teacher, color };
+      }
+      
+      saveCurrentSemesterData();
+      closeModal();
+    }
 
-    function deleteCourseFromModal() {if (dragFillKeys.length > 0) {
-  dragFillKeys.forEach(key => {
-    delete scheduleData[key];
-  });
-} else {
-    delete scheduleData[selectedKey];
-}}
+    function deleteCourseFromModal() {
+      if (dragFillKeys.length > 0) {
+        // Delete from all selected cells
+        dragFillKeys.forEach(key => {
+          delete scheduleData[key];
+        });
+      } else {
+        // Single cell
+        delete scheduleData[selectedKey];
+      }
+      
+      saveCurrentSemesterData();
+      closeModal();
+    }
 
     function fillSampleData() {
       scheduleData = {
@@ -976,9 +902,6 @@ function handleTouchEnd(event) {
 
       reader.readAsText(file);
     }
-
-    document.addEventListener("pointermove", handlePointerMove);
-    document.addEventListener("pointerup", handlePointerUp);
 
     applyDarkMode();
     saveSemesterList();
